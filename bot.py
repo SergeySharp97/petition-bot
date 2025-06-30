@@ -12,16 +12,15 @@ user_states = {}
 
 def clean_text(text: str) -> str:
     import re
-    text = re.sub(r'[\*_`]', '', text)
-    return text.strip()
+    return re.sub(r'[\*_`]', '', text).strip()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("\U0001F4E8 Подати петицію", callback_data="submit_petition")]]
+    keyboard = [[InlineKeyboardButton("📨 Подати петицію", callback_data="submit_petition")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
-        await update.message.reply_text("\U0001F44B Привіт! Оберіть опцію:", reply_markup=reply_markup)
+        await update.message.reply_text("👋 Привіт! Оберіть опцію:", reply_markup=reply_markup)
     elif update.callback_query:
-        await update.callback_query.message.reply_text("\U0001F44B Привіт! Оберіть опцію:", reply_markup=reply_markup)
+        await update.callback_query.message.reply_text("👋 Привіт! Оберіть опцію:", reply_markup=reply_markup)
 
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -36,8 +35,8 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Оберіть варіант нижче."
         )
         keyboard = [
-            [InlineKeyboardButton("\U0001F501 Поширити групу", callback_data="share_group")],
-            [InlineKeyboardButton("\U0001F4B8 Підтримати розвиток спільноти", callback_data="donate")]
+            [InlineKeyboardButton("🔁 Поширити групу", callback_data="share_group")],
+            [InlineKeyboardButton("💸 Підтримати розвиток спільноти", callback_data="donate")]
         ]
         await query.message.reply_text(caption, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -51,18 +50,17 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Частина прибутку з монетизації Каналу йде на підтримку людей, які щодня працюють задля допомоги нашим захисникам.\n"
                 "Але щоб ці спільноти приносили ще більше користі, потрібно постійно інвестувати в рекламу.\n\n"
                 "Саме для цього ми створили банку для розвитку Каналу.\n\n"
-                "\U0001F517 Посилання банки: https://send.monobank.ua/jar/3fFzMioXwn\n"
-                "\U0001F3E6 Номер банки: 5375 4112 1778 2270\n\n"
+                "🔗 Посилання банки: https://send.monobank.ua/jar/3fFzMioXwn\n"
+                "🏦 Номер банки: 5375 4112 1778 2270\n\n"
                 "<b>Сума донату не важлива — важливо, як ви оцінюєте наш час.</b>\n"
                 "Після виконання правил публікації натисніть 'Умови виконані'."
             )
             await query.message.reply_text(text, parse_mode="HTML")
         else:
             await query.message.reply_text(
-                "\U0001F4E3 Поширте посилання на групу серед людей, з якими ви обмінювались підписами (10–15 чатів).\n"
-                "Скопіюйте посилання та поширте:\n"
-                "\U0001F517 https://t.me/Save_Ukraine_UA\n\n"
-                "Після виконання правил публікації натисніть 'Умови виконані'."
+                "📣 Поширте посилання на групу серед людей, з якими ви обмінювались підписами (10–15 чатів):\n"
+                "🔗 https://t.me/Save_Ukraine_UA\n\n"
+                "Після виконання натисніть 'Умови виконані'."
             )
 
         await query.message.reply_text(
@@ -78,7 +76,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_state["step"] = "awaiting_photo"
             await query.message.reply_text("✍️ Надішліть фото Героя.")
         else:
-            await query.message.reply_text("❗ Будь ласка, спершу надішліть скріншоти, які підтверджують виконання умови.")
+            await query.message.reply_text("❗ Спочатку надішліть скріншоти, які підтверджують виконання умови.")
 
 async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
@@ -88,7 +86,7 @@ async def handle_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_state.get("step") == "awaiting_proof":
         user_state.setdefault("proof_photos", []).append(update.message.photo[-1].file_id)
-        await update.message.reply_text("Після виконання правил публікації натисніть 'Умови виконані'.")
+        await update.message.reply_text("Після виконання натисніть 'Умови виконані'.")
 
     elif user_state.get("step") == "awaiting_photo":
         user_state["hero_photo"] = update.message.photo[-1].file_id
@@ -100,20 +98,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = update.message.from_user.id
     user_state = user_states.setdefault(user_id, {})
-    text = update.message.text
+    text = clean_text(update.message.text)
 
     if user_state.get("step") == "awaiting_hero_name":
-        user_state["hero_name"] = clean_text(text)
+        user_state["hero_name"] = text
         user_state["step"] = "awaiting_petition_link"
         await update.message.reply_text("🔗 Надішліть посилання на петицію.")
 
     elif user_state.get("step") == "awaiting_petition_link":
-        user_state["petition_link"] = clean_text(text)
+        user_state["petition_link"] = text
         user_state["step"] = "awaiting_exchange_contacts"
         await update.message.reply_text("🔁 Надішліть контакти для обміну петиціями.")
 
     elif user_state.get("step") == "awaiting_exchange_contacts":
-        user_state["exchange_contacts"] = clean_text(text)
+        user_state["exchange_contacts"] = text
         user_state["step"] = "completed"
 
         keyboard = InlineKeyboardMarkup([
@@ -149,28 +147,35 @@ async def handle_admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYP
     user_state = user_states.get(user_id)
 
     if not user_state:
-        await query.edit_message_caption(caption=query.message.caption + "\n\n⚠️ Дані користувача не знайдено.", reply_markup=None, parse_mode="HTML")
+        await query.edit_message_caption(
+            caption=query.message.caption + "\n\n⚠️ Дані користувача не знайдено.",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
         return
 
     if data.startswith("approve_"):
-        await query.edit_message_caption(caption=query.message.caption + "\n\n✅ Петицію схвалено та опубліковано!", reply_markup=None, parse_mode="HTML")
+        await query.edit_message_caption(
+            caption=query.message.caption + "\n\n✅ Петицію схвалено та опубліковано!",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
 
         await context.bot.send_photo(
             chat_id=CHANNEL_USERNAME,
             photo=user_state['hero_photo'],
-            caption=(
-                f"📝 <b>Герой:</b> {user_state['hero_name']}\n"
-                f"🔗 <b>Петиція:</b> {user_state['petition_link']}\n"
-                f"🔁 <b>Обмін:</b> {user_state['exchange_contacts']}\n\n"
-                f"🔗 <b>Приєднуйтесь до нашої спільноти:</b> https://t.me/Save_Ukraine_UA\n"
-                f"📣 <b>Поширте петицію — кожен голос має значення!</b>"
-            ),
+            caption=query.message.caption,
             parse_mode="HTML"
         )
 
     elif data.startswith("reject_"):
-        await query.edit_message_caption(caption=query.message.caption + "\n\n❌ Петицію відхилено.", reply_markup=None, parse_mode="HTML")
+        await query.edit_message_caption(
+            caption=query.message.caption + "\n\n❌ Петицію відхилено.",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
 
+# === Запуск бота ===
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
